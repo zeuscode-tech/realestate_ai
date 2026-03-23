@@ -59,66 +59,75 @@
 <script>
 let myChart;
 
-function getPrediction(age, mrt, stores) {
-    const intercept = 42.5;
-    const w_age = -0.22;
-    const w_mrt = -4.8; 
-    const w_stores = 1.15;
-    
-    const mrt_log = Math.log1p(mrt);
-    let pred = intercept + (w_age * age) + (w_mrt * mrt_log) + (w_stores * stores);
-    
-    return (pred * 10000 / 3.3) / 31;
-}
-
-function updateAll() {
+async function updateAll() {
     const age = parseFloat(document.getElementById('age').value);
     const mrt = parseFloat(document.getElementById('mrt').value);
     const stores = parseFloat(document.getElementById('stores').value);
 
-    const currentPrice = getPrediction(age, mrt, stores);
-    document.getElementById('price-display').innerText = Math.round(currentPrice).toLocaleString();
+    try {
+        // Get current price prediction
+        const priceResponse = await fetch('/api/predict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ age, mrt, stores })
+        });
+        
+        if (!priceResponse.ok) throw new Error('Failed to get price prediction');
+        const priceData = await priceResponse.json();
+        const currentPrice = priceData.price;
+        
+        document.getElementById('price-display').innerText = Math.round(currentPrice).toLocaleString();
 
-    const labels = [];
-    const dataPoints = [];
-    for (let d = 100; d <= 3000; d += 200) {
-        labels.push(d);
-        dataPoints.push(getPrediction(age, d, stores));
-    }
+        // Get chart data
+        const chartResponse = await fetch('/api/chart-data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ age, stores })
+        });
+        
+        if (!chartResponse.ok) throw new Error('Failed to get chart data');
+        const chartDataResponse = await chartResponse.json();
+        const labels = chartDataResponse.distances;
+        const dataPoints = chartDataResponse.prices;
 
-    const ctx = document.getElementById('myChart').getContext('2d');
-    
-    if (myChart) myChart.destroy(); 
+        const ctx = document.getElementById('myChart').getContext('2d');
+        
+        if (myChart) myChart.destroy(); 
 
-    myChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Цена от расстояния до метро',
-                data: dataPoints,
-                borderColor: '#38bdf8',
-                backgroundColor: 'rgba(56, 189, 248, 0.1)',
-                fill: true,
-                tension: 0.4
-            }, {
-                label: 'Ваш выбор',
-                data: [{x: mrt.toString(), y: currentPrice}],
-                backgroundColor: '#fb923c',
-                radius: 6,
-                type: 'scatter'
-            }]
-        },
-        options: {
-            scales: {
-                y: { beginAtZero: false, grid: { color: '#334155' } },
-                x: { title: { display: true, text: 'Метры до метро' }, grid: { display: false } }
+        myChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Цена от расстояния до метро',
+                    data: dataPoints,
+                    borderColor: '#38bdf8',
+                    backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }, {
+                    label: 'Ваш выбор',
+                    data: [{x: mrt.toString(), y: currentPrice}],
+                    backgroundColor: '#fb923c',
+                    radius: 6,
+                    type: 'scatter'
+                }]
             },
-            plugins: { legend: { display: false } }
-        }
-    });
+            options: {
+                scales: {
+                    y: { beginAtZero: false, grid: { color: '#334155' } },
+                    x: { title: { display: true, text: 'Метры до метро' }, grid: { display: false } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('price-display').innerText = '⚠️ Ошибка';
+    }
 }
 
+// Load data when page loads
 updateAll();
 </script>
 
