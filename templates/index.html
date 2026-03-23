@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Realty — Анализ и Прогноз</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; --text: #e2e8f0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; padding: 20px; margin: 0; }
+        .container { max-width: 800px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .container { grid-template-columns: 1fr; } }
+        .section { background: var(--card); padding: 20px; border-radius: 15px; border: 1px solid #334155; }
+        h1, h2 { color: var(--accent); margin-top: 0; font-size: 1.2rem; }
+        .input-group { margin-bottom: 12px; }
+        label { display: block; font-size: 11px; color: #94a3b8; margin-bottom: 4px; text-transform: uppercase; }
+        input { width: 100%; background: #0f172a; border: 1px solid #334155; padding: 10px; color: white; border-radius: 8px; box-sizing: border-box; }
+        button { width: 100%; background: var(--accent); color: #0f172a; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        #result { margin-top: 20px; text-align: center; border-top: 1px solid #334155; padding-top: 15px; }
+        .price-val { font-size: 24px; font-weight: 800; color: var(--accent); }
+        canvas { background: #1e293b; border-radius: 10px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="section">
+        <h2>🔮 Параметры</h2>
+        <div class="input-group">
+            <label>Возраст дома (лет)</label>
+            <input type="number" id="age" value="10">
+        </div>
+        <div class="input-group">
+            <label>До метро (метры)</label>
+            <input type="number" id="mrt" value="500">
+        </div>
+        <div class="input-group">
+            <label>Магазины рядом</label>
+            <input type="number" id="stores" value="5">
+        </div>
+        <button onclick="updateAll()">Рассчитать и обновить</button>
+
+        <div id="result">
+            <div style="font-size: 11px; color: #94a3b8;">ПРОГНОЗ ЦЕНЫ:</div>
+            <div class="price-val" id="price-display">—</div>
+            <div style="font-size: 11px; color: #94a3b8;">USD / м²</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>📈 Зависимость от метро</h2>
+        <canvas id="myChart"></canvas>
+        <p style="font-size: 10px; color: #94a3b8; margin-top: 10px;">
+            Синяя точка — ваш выбор. Линия показывает, как изменится цена, если дом будет дальше от метро.
+        </p>
+    </div>
+</div>
+
+<script>
+let myChart;
+
+function getPrediction(age, mrt, stores) {
+    const intercept = 42.5;
+    const w_age = -0.22;
+    const w_mrt = -4.8; 
+    const w_stores = 1.15;
+    
+    const mrt_log = Math.log1p(mrt);
+    let pred = intercept + (w_age * age) + (w_mrt * mrt_log) + (w_stores * stores);
+    
+    return (pred * 10000 / 3.3) / 31;
+}
+
+function updateAll() {
+    const age = parseFloat(document.getElementById('age').value);
+    const mrt = parseFloat(document.getElementById('mrt').value);
+    const stores = parseFloat(document.getElementById('stores').value);
+
+    const currentPrice = getPrediction(age, mrt, stores);
+    document.getElementById('price-display').innerText = Math.round(currentPrice).toLocaleString();
+
+    const labels = [];
+    const dataPoints = [];
+    for (let d = 100; d <= 3000; d += 200) {
+        labels.push(d);
+        dataPoints.push(getPrediction(age, d, stores));
+    }
+
+    const ctx = document.getElementById('myChart').getContext('2d');
+    
+    if (myChart) myChart.destroy(); 
+
+    myChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Цена от расстояния до метро',
+                data: dataPoints,
+                borderColor: '#38bdf8',
+                backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                fill: true,
+                tension: 0.4
+            }, {
+                label: 'Ваш выбор',
+                data: [{x: mrt.toString(), y: currentPrice}],
+                backgroundColor: '#fb923c',
+                radius: 6,
+                type: 'scatter'
+            }]
+        },
+        options: {
+            scales: {
+                y: { beginAtZero: false, grid: { color: '#334155' } },
+                x: { title: { display: true, text: 'Метры до метро' }, grid: { display: false } }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+}
+
+updateAll();
+</script>
+
+</body>
+</html>
