@@ -32,7 +32,13 @@ r2 = r2_score(y_test, y_pred)
 area_map = df.groupby([df['X5 latitude'].round(3), df['X6 longitude'].round(3)])['price'].mean().to_dict()
 
 with open("re_model.pkl", "wb") as f:
-    pickle.dump({"model": model, "area_map": area_map}, f)
+    pickle.dump({
+        "model": model,
+        "area_map": area_map,
+        "y_test": y_test.tolist(),
+        "y_pred": y_pred.tolist(),
+        "r2": float(r2)
+    }, f)
 
 print("--- СИСТЕМА: Файл re_model.pkl успешно создан! ---")
 
@@ -45,5 +51,6 @@ plt.scatter(y_test, y_pred, color='green', alpha=0.5)
 plt.plot([y.min(), y.max()], [y.min(), y.max()], 'r--', lw=3)
 plt.title(f"Точность = {r2*100:.2f}%")
 plt.xlabel("Реальность")
-plt.ylabel("Предсказание") 
+plt.ylabel("Предсказание")
+plt.savefig("templates/scatter.png", dpi=100, bbox_inches='tight', facecolor='#1e293b')
 plt.show()

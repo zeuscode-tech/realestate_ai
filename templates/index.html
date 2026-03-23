@@ -3,27 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Realty — Анализ и Прогноз</title>
+    <title>House Price Prediction</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; --text: #e2e8f0; }
+        * { box-sizing: border-box; }
         body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; padding: 20px; margin: 0; }
-        .container { max-width: 800px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        @media (max-width: 768px) { .container { grid-template-columns: 1fr; } }
+
+        /* Header */
+        .header { max-width: 1200px; margin: 0 auto 20px; background: var(--card); padding: 22px 28px; border-radius: 15px; border: 1px solid #334155; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+        .header-title h1 { color: var(--accent); margin: 0; font-size: 1.5rem; }
+        .header-title p { color: #94a3b8; font-size: 12px; margin: 4px 0 0; }
+        .badge { background: #1e3a5f; color: var(--accent); border: 1px solid var(--accent); border-radius: 8px; padding: 5px 14px; font-size: 12px; font-weight: 700; }
+        .badge-green { background: #14532d; color: #4ade80; border: 1px solid #4ade80; border-radius: 8px; padding: 5px 14px; font-size: 12px; font-weight: 700; }
+
+        /* Grids */
+        .container { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+        .tables-container { max-width: 1200px; margin: 20px auto 0; display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+        @media (max-width: 900px) { .container, .tables-container { grid-template-columns: 1fr; } }
+
         .section { background: var(--card); padding: 20px; border-radius: 15px; border: 1px solid #334155; }
-        h1, h2 { color: var(--accent); margin-top: 0; font-size: 1.2rem; }
+        h2 { color: var(--accent); margin-top: 0; font-size: 1rem; margin-bottom: 14px; }
+
+        /* Form */
         .input-group { margin-bottom: 12px; }
-        label { display: block; font-size: 11px; color: #94a3b8; margin-bottom: 4px; text-transform: uppercase; }
-        input { width: 100%; background: #0f172a; border: 1px solid #334155; padding: 10px; color: white; border-radius: 8px; box-sizing: border-box; }
-        button { width: 100%; background: var(--accent); color: #0f172a; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        #result { margin-top: 20px; text-align: center; border-top: 1px solid #334155; padding-top: 15px; }
-        .price-val { font-size: 24px; font-weight: 800; color: var(--accent); }
-        canvas { background: #1e293b; border-radius: 10px; margin-top: 10px; }
+        label { display: block; font-size: 11px; color: #94a3b8; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+        input { width: 100%; background: #0f172a; border: 1px solid #334155; padding: 10px; color: white; border-radius: 8px; font-size: 14px; }
+        button { width: 100%; background: var(--accent); color: #0f172a; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 14px; }
+        button:hover { opacity: 0.88; }
+        #result { margin-top: 18px; text-align: center; border-top: 1px solid #334155; padding-top: 14px; }
+        .price-val { font-size: 30px; font-weight: 800; color: var(--accent); }
+        .chart-note { font-size: 10px; color: #94a3b8; margin-top: 8px; line-height: 1.5; }
+
+        /* Tables */
+        .table-wrap { overflow-x: auto; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        th { background: #0f172a; color: var(--accent); padding: 7px 10px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #334155; white-space: nowrap; }
+        td { padding: 6px 10px; border-bottom: 1px solid #1a2742; }
+        tr:hover td { background: #243049; }
+        .col-desc { margin-top: 12px; padding-top: 12px; border-top: 1px solid #334155; font-size: 11px; color: #94a3b8; line-height: 2; }
+        .col-desc strong { color: var(--accent); }
+        .col-desc .tgt { color: #4ade80; }
+        .tag { display: inline-block; background: #1e3a5f; color: var(--accent); border-radius: 4px; padding: 2px 7px; font-size: 10px; font-weight: 700; }
+        .tag-target { background: #14532d; color: #4ade80; }
+        .tag-derived { background: #3b1f5e; color: #c084fc; }
     </style>
 </head>
 <body>
 
+<div class="header">
+    <div class="header-title">
+        <h1>🏠 House Price Prediction</h1>
+        <p>Dataset: Real Estate (Taiwan) &nbsp;·&nbsp; 414 объектов</p>
+    </div>
+    <div class="badge">📐 Linear Regression</div>
+    <div class="badge-green" id="r2-badge">R² = загрузка...</div>
+</div>
+
 <div class="container">
+
     <div class="section">
         <h2>🔮 Параметры</h2>
         <div class="input-group">
@@ -38,96 +76,232 @@
             <label>Магазины рядом</label>
             <input type="number" id="stores" value="5">
         </div>
+        <div class="input-group">
+            <label>Широта (X5)</label>
+            <input type="number" id="lat" value="24.983" step="0.001">
+        </div>
+        <div class="input-group">
+            <label>Долгота (X6)</label>
+            <input type="number" id="lng" value="121.540" step="0.001">
+        </div>
         <button onclick="updateAll()">Рассчитать и обновить</button>
-
         <div id="result">
             <div style="font-size: 11px; color: #94a3b8;">ПРОГНОЗ ЦЕНЫ:</div>
             <div class="price-val" id="price-display">—</div>
-            <div style="font-size: 11px; color: #94a3b8;">USD / м²</div>
+            <div style="font-size: 11px; color: #94a3b8;">TWD / м²</div>
         </div>
     </div>
 
     <div class="section">
         <h2>📈 Зависимость от метро</h2>
         <canvas id="myChart"></canvas>
-        <p style="font-size: 10px; color: #94a3b8; margin-top: 10px;">
-            Синяя точка — ваш выбор. Линия показывает, как изменится цена, если дом будет дальше от метро.
-        </p>
+        <p class="chart-note">Кривая — изменение цены при удалении от метро. Оранжевая точка — ваш выбор.</p>
     </div>
+
+    <div class="section">
+        <h2>🎯 Точность модели (факт vs прогноз)</h2>
+        <img src="/scatter.png" style="width:100%;border-radius:10px;margin-top:6px;" alt="Scatter plot">
+        <p class="chart-note">Каждая точка — объект из тестовой выборки. Красная линия — идеальный прогноз.</p>
+    </div>
+
+</div>
+
+<div class="tables-container">
+
+    <div class="section">
+        <h2>📋 Датасет — первые 10 строк</h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>X1 Дата</th>
+                        <th>X2 Возраст</th>
+                        <th>X3 До метро (м)</th>
+                        <th>X4 Магазины</th>
+                        <th>X5 Широта</th>
+                        <th>X6 Долгота</th>
+                        <th>Y Цена / м²</th>
+                    </tr>
+                </thead>
+                <tbody id="dataset-body">
+                    <tr><td colspan="8" style="text-align:center;color:#94a3b8">Загрузка...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="col-desc">
+            <strong>X1</strong> — Дата сделки (год.месяц) &nbsp;
+            <strong>X2</strong> — Возраст дома в годах &nbsp;
+            <strong>X3</strong> — Расстояние до метро (м) &nbsp;
+            <strong>X4</strong> — Количество магазинов рядом &nbsp;
+            <strong>X5 / X6</strong> — Широта и долгота объекта &nbsp;
+            <strong class="tgt">Y</strong> — <strong class="tgt">Цена за единицу площади</strong> (целевая переменная)
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>🧮 Признаки модели</h2>
+        <table>
+            <thead>
+                <tr><th>Признак</th><th>Из</th><th>Тип</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>house_age</strong><br><span style="color:#94a3b8;font-size:10px">Возраст дома, лет</span></td>
+                    <td>X2</td>
+                    <td><span class="tag">Входной</span></td>
+                </tr>
+                <tr>
+                    <td><strong>mrt_log</strong><br><span style="color:#94a3b8;font-size:10px">log(расст. до метро)</span></td>
+                    <td>log(X3)</td>
+                    <td><span class="tag tag-derived">Производный</span></td>
+                </tr>
+                <tr>
+                    <td><strong>stores</strong><br><span style="color:#94a3b8;font-size:10px">Кол-во магазинов</span></td>
+                    <td>X4</td>
+                    <td><span class="tag">Входной</span></td>
+                </tr>
+                <tr>
+                    <td><strong>area_mean</strong><br><span style="color:#94a3b8;font-size:10px">Ср. цена района</span></td>
+                    <td>X5+X6+Y</td>
+                    <td><span class="tag tag-derived">Производный</span></td>
+                </tr>
+                <tr>
+                    <td><strong>price</strong><br><span style="color:#4ade80;font-size:10px">Цена за м²</span></td>
+                    <td>Y</td>
+                    <td><span class="tag tag-target">Целевой</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
 </div>
 
 <script>
-let myChart;
+let myChart, scatterChart;
+
+async function loadModelStats() {
+    try {
+        const resp = await fetch('/api/model-stats');
+        const data = await resp.json();
+        document.getElementById('r2-badge').textContent = `R² = ${data.r2}%`;
+
+        const yTest = data.y_test;
+        const yPred = data.y_pred;
+        const minVal = Math.min(...yTest, ...yPred);
+        const maxVal = Math.max(...yTest, ...yPred);
+
+        const ctx = document.getElementById('scatterChart').getContext('2d');
+        if (scatterChart) scatterChart.destroy();
+        scatterChart = new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Факт vs Прогноз',
+                    data: yTest.map((v, i) => ({ x: v, y: yPred[i] })),
+                    backgroundColor: 'rgba(56, 189, 248, 0.5)',
+                    pointRadius: 4
+                }, {
+                    label: 'Идеал',
+                    data: [{ x: minVal, y: minVal }, { x: maxVal, y: maxVal }],
+                    type: 'line',
+                    borderColor: '#ef4444',
+                    borderDash: [6, 4],
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    fill: false
+                }]
+            },
+            options: {
+                scales: {
+                    x: { title: { display: true, text: 'Реальная цена', color: '#94a3b8' }, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                    y: { title: { display: true, text: 'Предсказанная', color: '#94a3b8' }, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    } catch (e) {
+        console.error('loadModelStats error:', e);
+    }
+}
+
+async function loadDataset() {
+    try {
+        const resp = await fetch('/api/dataset');
+        const data = await resp.json();
+        document.getElementById('dataset-body').innerHTML = data.rows.map(row => `
+            <tr>
+                <td>${row['No']}</td>
+                <td>${row['X1 transaction date']}</td>
+                <td>${row['X2 house age']}</td>
+                <td>${row['X3 distance to the nearest MRT station']}</td>
+                <td>${row['X4 number of convenience stores']}</td>
+                <td>${parseFloat(row['X5 latitude']).toFixed(4)}</td>
+                <td>${parseFloat(row['X6 longitude']).toFixed(4)}</td>
+                <td><strong style="color:var(--accent)">${row['Y house price of unit area']}</strong></td>
+            </tr>`).join('');
+    } catch (e) {
+        console.error('loadDataset error:', e);
+    }
+}
 
 async function updateAll() {
-    const age = parseFloat(document.getElementById('age').value);
-    const mrt = parseFloat(document.getElementById('mrt').value);
+    const age    = parseFloat(document.getElementById('age').value);
+    const mrt    = parseFloat(document.getElementById('mrt').value);
     const stores = parseFloat(document.getElementById('stores').value);
+    const lat    = parseFloat(document.getElementById('lat').value);
+    const lng    = parseFloat(document.getElementById('lng').value);
 
     try {
-        // Get current price prediction
-        const priceResponse = await fetch('/api/predict', {
+        const priceResp = await fetch('/api/predict', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ age, mrt, stores })
+            body: JSON.stringify({ age, mrt, stores, lat, lng })
         });
-        
-        if (!priceResponse.ok) throw new Error('Failed to get price prediction');
-        const priceData = await priceResponse.json();
+        const priceData = await priceResp.json();
         const currentPrice = priceData.price;
-        
         document.getElementById('price-display').innerText = Math.round(currentPrice).toLocaleString();
 
-        // Get chart data
-        const chartResponse = await fetch('/api/chart-data', {
+        const chartResp = await fetch('/api/chart-data', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ age, stores })
         });
-        
-        if (!chartResponse.ok) throw new Error('Failed to get chart data');
-        const chartDataResponse = await chartResponse.json();
-        const labels = chartDataResponse.distances;
-        const dataPoints = chartDataResponse.prices;
+        const chartData = await chartResp.json();
 
         const ctx = document.getElementById('myChart').getContext('2d');
-        
-        if (myChart) myChart.destroy(); 
-
+        if (myChart) myChart.destroy();
         myChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: labels,
+                labels: chartData.distances,
                 datasets: [{
-                    label: 'Цена от расстояния до метро',
-                    data: dataPoints,
+                    data: chartData.prices,
                     borderColor: '#38bdf8',
                     backgroundColor: 'rgba(56, 189, 248, 0.1)',
-                    fill: true,
-                    tension: 0.4
+                    fill: true, tension: 0.4, pointRadius: 2
                 }, {
-                    label: 'Ваш выбор',
-                    data: [{x: mrt.toString(), y: currentPrice}],
+                    data: [{ x: mrt.toString(), y: currentPrice }],
                     backgroundColor: '#fb923c',
-                    radius: 6,
+                    pointRadius: 8,
                     type: 'scatter'
                 }]
             },
             options: {
                 scales: {
-                    y: { beginAtZero: false, grid: { color: '#334155' } },
-                    x: { title: { display: true, text: 'Метры до метро' }, grid: { display: false } }
+                    y: { beginAtZero: false, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                    x: { title: { display: true, text: 'Метры до метро', color: '#94a3b8' }, grid: { display: false }, ticks: { color: '#94a3b8' } }
                 },
                 plugins: { legend: { display: false } }
             }
         });
-    } catch (error) {
-        console.error('Error:', error);
+    } catch (err) {
         document.getElementById('price-display').innerText = '⚠️ Ошибка';
     }
 }
 
-// Load data when page loads
+loadModelStats();
+loadDataset();
 updateAll();
 </script>
 
